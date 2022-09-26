@@ -1,0 +1,42 @@
+#!/bin/bash
+
+COMPILE_CMD='clang -g -o mywc wc.c'
+STUDENT_CMD='./mywc $@'
+REF_CMD='wc -l $@ 2>&1'
+
+function compile() {
+    if ! $COMPILE_CMD; then
+        echo "Compilation Failed.";
+        exit 1;
+    fi
+}
+
+function test() {
+    STU_CMD=$(eval echo $STUDENT_CMD)
+
+    valgrind --error-exitcode=101 --log-file=.valgrind-output --leak-check=full --show-leak-kinds=all $STU_CMD &> .output;
+    valgrind_error=$?
+    if grep "All heap blocks were freed -- no leaks are possible" .valgrind-output > /dev/null; then
+        leak=0
+    else
+        leak=1
+    fi
+    diff <(eval $REF_CMD) .output;
+    diff_ret=$?
+    if [ $diff_ret -eq 0 ] && [ $leak -eq 0 ] && [ $valgrind_error -ne 101 ]; then
+        echo "$1: Passed";
+    elif [ $valgrind_error -eq 101 ]; then
+        echo "$1: Execution Error"
+    elif [ $diff_ret -ne  0 ]; then
+        echo "$1: Failed";
+    else
+        echo "$1: Memory Leak"
+    fi
+    rm .valgrind-output .output;
+}
+
+compile;
+for x in data/*; do
+    test $x;
+done
+test file_does_not_exist;
