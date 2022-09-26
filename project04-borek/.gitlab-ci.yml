@@ -1,0 +1,4 @@
+lint:
+    script: "/testers/cs3/project04/lint/test"
+student:
+    script: "/testers/cs3/project04/student/test"
